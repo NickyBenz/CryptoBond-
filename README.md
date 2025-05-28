@@ -12,4 +12,4 @@ Time-Locked Smart Contracts: Users can lock cryptocurrencies (WBTC, ETH, USDC, U
 - makeDeposit: This function takes a balance and maturity from the user for their tokens to create and store a holding 
 - withDraw: If the holding is past maturity, the user is allowed to withdraw from their holding
 - _getUSDAmount(): Internal function accessing the WBTC/USDT pool to check the USD value of the pool, ensuring it works.
-
+- _blockTimeStamp(): Returns a formatted timestamp 
