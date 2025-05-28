@@ -1,0 +1,10 @@
+build:
+    forge build
+
+test:
+    forge test -vvvv
+
+fork:
+    forge test --fork-url BASE_SEPOLIA_L2_URL
+
+	
