@@ -16,10 +16,13 @@ error NoDepositFound(); //Error to revert when a user tries to withdraw without 
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+
+/// @title DeBond, crypto savings bond
+/// @author Nikhil Bezwada
+/// @notice Allows users to deposit WBTC tokens (after approving the contract) at a maturity with a fixed limit of $1000
+
 contract DeBond {
-    address constant  WBTCUSDCPOOL = 0xfBB6Eed8e7aa03B138556eeDaF5D271A5E1e43ef; //Uniswap V3 USDC/cbBTC pool to retrieve price 
-    address constant cbBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf;
-    address constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
+
     uint256 constant MAXDEPOSITAMOUNT = 1000;
     //Defined a custom struct to manage each user's holdings
     struct Holding{
@@ -33,9 +36,13 @@ contract DeBond {
     //Mapping to check if the user has an active holding
     mapping(address => bool) s_isActive;
     
- 
+    address constant  WBTCUSDCPOOL = 0xfBB6Eed8e7aa03B138556eeDaF5D271A5E1e43ef; //Uniswap V3 USDC/cbBTC pool on base to retrieve price 
+    address constant cbBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; //Coinbase Wrapped BTC (cbBTC) address for base
+    address constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC address for base 
 
-
+    /// @notice Deposit WBTC tokens to the contract once contract has recieved approval
+    /// @param depositAmount Amount of WBTC tokens the user would like to deposit 
+    /// @param maturity_date Timestamp at which the savings bond should allow the user to withdraw 
     function depositSavings(uint256 depositAmount, uint256 maturity_date ) external {
             if(s_isActive[msg.sender]){
                 revert AlreadyDeposited();
@@ -58,7 +65,8 @@ contract DeBond {
             }
 
     }
-
+    /// @notice Withdraw tokens from contract
+    /// @param withdrawalAmount Amount of WBTC tokens the user would like to withdraw 
     function withDrawSavings(uint256 withdrawalAmount) external {
             if(!(s_isActive[msg.sender])){
                 revert NoDepositFound();

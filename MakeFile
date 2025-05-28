@@ -3,8 +3,9 @@ build:
 
 test:
     forge test -vvvv
+deploy:
+	forge script script/DeployDeBond.s.sol:DeployDeBond --rpc-url $BASE_SEPOLIA_L2_URL
 
 fork:
     forge test --fork-url BASE_SEPOLIA_L2_URL
 
-	
