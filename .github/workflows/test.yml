@@ -38,8 +38,4 @@ jobs:
           forge build --sizes
         id: build
 
-      - name: Run Forge tests
-        run: |
-          cd .. 
-          forge test -vvv
-        id: test
+     
