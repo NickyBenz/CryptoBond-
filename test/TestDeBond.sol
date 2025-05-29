@@ -57,6 +57,29 @@ contract TestDeBond is Test {
 
     }
 
+
+
+    function testDepositFailAbove1000USD(uint256 usd_deposit_amount) public  { 
+        vm.assume(usd_deposit_amount > 1000e6 && usd_deposit_amount < 2000e6);
+        vm.startPrank(ScriptConstants.cBBTCWHALE);
+
+        uint256 initial_WBTC_Balance = IERC20(ScriptConstants.cbBTC).balanceOf(ScriptConstants.cBBTCWHALE);
+        uint256 wbtc_deposit = _getBTCAmount(usd_deposit_amount);
+        vm.expectRevert(DeBond.ExceededMaxUSDAmount.selector);
+        deBond.depositSavings(wbtc_deposit, ScriptConstants.MATURITY );
+
+        uint256 final_WBTC_Balance = IERC20(ScriptConstants.cbBTC).balanceOf(ScriptConstants.cBBTCWHALE);
+        
+
+        vm.stopPrank();
+
+
+
+
+    }
+
+
+
     function _getBTCAmount(uint256 usd_amount) internal view returns(uint256 wbtcAmt){
          (uint160 sqrtPriceX96,,,,,, ) = IUniswapV3Pool(ScriptConstants.WBTCUSDCPOOL).slot0();
          console.log(sqrtPriceX96);
@@ -76,5 +99,16 @@ contract TestDeBond is Test {
                  
     }
 
+    function testGetUSDAmount() public {
+                vm.startPrank(ScriptConstants.cBBTCWHALE);
+                uint256 btcDecimals = ERC20(ScriptConstants.USDC).decimals();
+
+                uint256 testWBTC = 1*(10**btcDecimals);
+                (uint256 usdAmt, uint256 formatted_price) = deBond._getUSDAmount(testWBTC);
+                console.log(usdAmt);
+                console.log(formatted_price);
+                vm.stopPrank();
+                
+    }
 
 }

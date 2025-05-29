@@ -5,12 +5,7 @@ pragma solidity ^0.8.20;
 event HoldingCreated(address holder, uint256 depositAmount, uint256 maturity); //Event to emit whenever a new user creates a bond holding
 event SavingsWithdrawed(address holder, uint256 withdrawalAmount); //Event to emit whenever a user successfully withdraws from their hoding
 
-error CannotWithdrawBeforeMaturity(uint256 maturity); //Error to revert whenever a user attempts to withdraw from their bond before their maturity date
-error ExceededMaxUSDAmount(uint256 amount); //Error to revert when the user attempts to deposit above the max withdrawal rate
-error DepositExceedsAccountBalance(); //Error to revert when the user attemps to deposit a token balance higher than their own balance of the token
-error AlreadyDeposited(); //Error to revert if user has already deposited a savings bond 
-error WithdrawalExceedsBalance(); //Error to revert when user requested withdrawal exceeds the amount they had initially deposited
-error NoDepositFound(); //Error to revert when a user tries to withdraw without a deposit
+
 
 
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
@@ -23,7 +18,12 @@ import "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 /// @notice Allows users to deposit WBTC tokens (after approving the contract) at a maturity with a fixed limit of $1000
 
 contract DeBond {
-
+    error CannotWithdrawBeforeMaturity(uint256 maturity); //Error to revert whenever a user attempts to withdraw from their bond before their maturity date
+    error ExceededMaxUSDAmount(); //Error to revert when the user attempts to deposit above the max withdrawal rate
+    error DepositExceedsAccountBalance(); //Error to revert when the user attemps to deposit a token balance higher than their own balance of the token
+    error AlreadyDeposited(); //Error to revert if user has already deposited a savings bond 
+    error WithdrawalExceedsBalance(); //Error to revert when user requested withdrawal exceeds the amount they had initially deposited
+    error NoDepositFound(); //Error to revert when a user tries to withdraw without a deposit   
     uint256 constant MAXDEPOSITAMOUNT = 1000e6;
     //Defined a custom struct to manage each user's holdings
     struct Holding{
@@ -45,14 +45,14 @@ contract DeBond {
     /// @param depositAmount Amount of WBTC tokens the user would like to deposit 
     /// @param maturity_date Timestamp at which the savings bond should allow the user to withdraw 
     function depositSavings(uint256 depositAmount, uint256 maturity_date ) external {
-            uint256 usdDepositValue = _getUSDAmount(depositAmount);
+            (uint256 usdDepositValue,) = _getUSDAmount(depositAmount);
 
             if(s_isActive[msg.sender]){
                 revert AlreadyDeposited();
             }else if(
                 usdDepositValue > MAXDEPOSITAMOUNT
             ){
-                revert ExceededMaxUSDAmount(usdDepositValue);
+                revert ExceededMaxUSDAmount();
             }else if(
                 IERC20(cbBTC).balanceOf(msg.sender) < depositAmount
             )
@@ -90,24 +90,21 @@ contract DeBond {
 
 
 
-    function _getUSDAmount(uint256 btc_amount) internal view returns (uint256 usdAmt){
+    function _getUSDAmount(uint256 btc_amount) public view returns (uint256 usdAmt, uint256 formatted_price){
         (uint160 sqrtPriceX96,,,,,, ) = IUniswapV3Pool(WBTCUSDCPOOL).slot0(); //Retrieves the current spot price from the USDC/cbBTC pool on UniswapV3
         //Convert the price into a readable price 
         //Price = sqrtPriceX96^2 /(2^192)
         uint256 squaredPriceX96 = uint256(sqrtPriceX96) * uint256(sqrtPriceX96);
-        uint256 formatted_price = Math.mulDiv( 2**192, 1, squaredPriceX96 );
+         formatted_price = (2**192)/( squaredPriceX96 );
+    
+        //Correct up to here;
+
         //Retrieve the decimals from the USDC and WBTC token contracts
         uint256 usdDecimals = uint256(_getDecimals(USDC)); 
         uint256 btcDecimals =uint256(_getDecimals(cbBTC));
 
-        uint256 scaledBtcAmount;
-     if (usdDecimals >= btcDecimals) {
-        scaledBtcAmount = btc_amount * (10 ** (usdDecimals - btcDecimals));
-    } else {
-        scaledBtcAmount = btc_amount / (10 ** (btcDecimals - usdDecimals));
-    }
+        usdAmt = (btc_amount * formatted_price * (10 ** usdDecimals)) / (10 ** btcDecimals * 1e18);
 
-        usdAmt = Math.mulDiv(scaledBtcAmount, formatted_price,1);
 
     }
 
