@@ -23,16 +23,19 @@ jobs:
   
       - name: Show Forge version
         run: |
+          cd .. 
           forge --version
 
  
 
       - name: Run Forge build
         run: |
+          cd .. 
           forge build --sizes
         id: build
 
       - name: Run Forge tests
         run: |
+          cd .. 
           forge test -vvv
         id: test
