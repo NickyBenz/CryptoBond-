@@ -22,7 +22,7 @@ jobs:
 
       - name: Install Foundry
         run: |
-          curl -L https://foundry.paradigm.xyz 
+          cd .. 
           foundryup
 
       - name: Show Forge version
