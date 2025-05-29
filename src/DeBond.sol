@@ -15,6 +15,7 @@ error NoDepositFound(); //Error to revert when a user tries to withdraw without 
 
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 /// @title DeBond, crypto savings bond
@@ -51,7 +52,7 @@ contract DeBond {
             }else if(
                 usdDepositValue > MAXDEPOSITAMOUNT
             ){
-                revert ExceededMaxUSDAmount(depositAmount);
+                revert ExceededMaxUSDAmount(usdDepositValue);
             }else if(
                 IERC20(cbBTC).balanceOf(msg.sender) < depositAmount
             )
@@ -94,12 +95,19 @@ contract DeBond {
         //Convert the price into a readable price 
         //Price = sqrtPriceX96^2 /(2^192)
 
-        uint256 formatted_price = (sqrtPriceX96 * sqrtPriceX96)/(2**192); 
+        uint256 formatted_price = Math.mulDiv( 2**192, 1,uint256(sqrtPriceX96) * uint256(sqrtPriceX96));
         //Retrieve the decimals from the USDC token contract
-        uint8 usdDecimals = _getDecimals(USDC); 
-        uint8 btcDecimals = _getDecimals(cbBTC);
-        uint256 scaledBtcAmount = btc_amount * (10 ** (usdDecimals - btcDecimals)); //Gets the BTC amount in terms of USDC decimals
-        usdAmt = scaledBtcAmount * formatted_price * (10 ** uint256(usdDecimals));  
+        uint256 usdDecimals = uint256(_getDecimals(USDC)); 
+        uint256 btcDecimals =uint256(_getDecimals(cbBTC));
+
+        uint256 scaledBtcAmount;
+     if (usdDecimals >= btcDecimals) {
+        scaledBtcAmount = btc_amount * (10 ** (usdDecimals - btcDecimals));
+    } else {
+        scaledBtcAmount = btc_amount / (10 ** (btcDecimals - usdDecimals));
+    }
+
+        usdAmt = Math.mulDiv(scaledBtcAmount, formatted_price,1);
 
     }
 

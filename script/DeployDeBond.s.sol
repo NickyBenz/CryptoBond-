@@ -12,7 +12,7 @@ library ScriptConstants {
     address constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC address for base 
     address constant cBBTCWHALE = 0x031f71f53d32393AC45E037f941b6362a11E3F3B;
     uint256 constant WBTCDEPOSIT = 93e12; //Deposit amount
-
+    uint256 constant MATURITY = 1e3;
     
 }
 
@@ -20,13 +20,16 @@ contract DeployDeBond is Script{
     
     
     
-    function run() public {
+    function run() public returns(DeBond) {
         
         
         vm.startPrank(ScriptConstants.cBBTCWHALE); //Start a prank as a WBTC whale 
         
         DeBond deBond = new DeBond(); //Deploys the contract to the chain
+        IERC20(ScriptConstants.cbBTC).approve(address(deBond), ScriptConstants.WBTCDEPOSIT);
 
         vm.stopPrank();
-    }
+
+        return deBond;
+    }   
 }
