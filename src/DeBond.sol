@@ -12,6 +12,7 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {AggregatorV3Interface} from "../lib/chainlink-local/src/data-feeds/interfaces/AggregatorV3Interface.sol";
 
 /// @title DeBond, crypto savings bond
 /// @author Nikhil Bezwada
@@ -24,7 +25,7 @@ contract DeBond {
     error AlreadyDeposited(); //Error to revert if user has already deposited a savings bond 
     error WithdrawalExceedsBalance(); //Error to revert when user requested withdrawal exceeds the amount they had initially deposited
     error NoDepositFound(); //Error to revert when a user tries to withdraw without a deposit   
-    uint256 constant MAXDEPOSITAMOUNT = 1000e6;
+    uint256 constant MAXDEPOSITAMOUNT = 1000e18;
     //Defined a custom struct to manage each user's holdings
     struct Holding{
         uint256 balance;
@@ -40,12 +41,13 @@ contract DeBond {
     address constant  WBTCUSDCPOOL = 0xfBB6Eed8e7aa03B138556eeDaF5D271A5E1e43ef; //Uniswap V3 USDC/cbBTC pool on base to retrieve price 
     address constant cbBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; //Coinbase Wrapped BTC (cbBTC) address for base
     address constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC address for base 
+    address constant usdc_btc_aggregator = 0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F;
 
     /// @notice Deposit WBTC tokens to the contract once contract has recieved approval
     /// @param depositAmount Amount of WBTC tokens the user would like to deposit 
     /// @param maturity_date Timestamp at which the savings bond should allow the user to withdraw 
     function depositSavings(uint256 depositAmount, uint256 maturity_date ) external {
-            (uint256 usdDepositValue,) = _getUSDAmount(depositAmount);
+            (uint256 usdDepositValue) = _getUSDAmount(depositAmount);
 
             if(s_isActive[msg.sender]){
                 revert AlreadyDeposited();
@@ -90,21 +92,13 @@ contract DeBond {
 
 
 
-    function _getUSDAmount(uint256 btc_amount) public view returns (uint256 usdAmt, uint256 formatted_price){
-        (uint160 sqrtPriceX96,,,,,, ) = IUniswapV3Pool(WBTCUSDCPOOL).slot0(); //Retrieves the current spot price from the USDC/cbBTC pool on UniswapV3
-        //Convert the price into a readable price 
-        //Price = sqrtPriceX96^2 /(2^192)
-        uint256 squaredPriceX96 = uint256(sqrtPriceX96) * uint256(sqrtPriceX96);
-         formatted_price = (2**192)/( squaredPriceX96 );
-    
-        //Correct up to here;
-
-        //Retrieve the decimals from the USDC and WBTC token contracts
-        uint256 usdDecimals = uint256(_getDecimals(USDC)); 
-        uint256 btcDecimals =uint256(_getDecimals(cbBTC));
-
-        usdAmt = (btc_amount * formatted_price * (10 ** usdDecimals)) / (10 ** btcDecimals * 1e18);
-
+    function _getUSDAmount(uint256 btc_amount) public view returns (uint256 usdAmt){
+        (,int256 price,,,) = AggregatorV3Interface(usdc_btc_aggregator).latestRoundData();
+        uint256 btcDecimals = ERC20(cbBTC).decimals();
+        uint256 usdDecimals = uint256(AggregatorV3Interface(usdc_btc_aggregator).decimals());
+        uint256 scaled_btc_amount = btc_amount * 10 **18;
+        usdAmt = Math.mulDiv(scaled_btc_amount, (10**usdDecimals), uint256(price) * 10**(usdDecimals + btcDecimals));
+        
 
     }
 

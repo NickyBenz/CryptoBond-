@@ -8,6 +8,8 @@ import {IERC20} from  "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.s
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {IUniswapV3Pool} from "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {AggregatorV3Interface} from "../lib/chainlink-local/src/data-feeds/interfaces/AggregatorV3Interface.sol";
+
 contract TestDeBond is Test {
     DeployDeBond deployer;
     DeBond deBond;
@@ -60,11 +62,13 @@ contract TestDeBond is Test {
 
 
     function testDepositFailAbove1000USD(uint256 usd_deposit_amount) public  { 
-        vm.assume(usd_deposit_amount > 1000e6 && usd_deposit_amount < 2000e6);
+        vm.assume(usd_deposit_amount > 1000);
         vm.startPrank(ScriptConstants.cBBTCWHALE);
 
         uint256 initial_WBTC_Balance = IERC20(ScriptConstants.cbBTC).balanceOf(ScriptConstants.cBBTCWHALE);
+        console.log(initial_WBTC_Balance);
         uint256 wbtc_deposit = _getBTCAmount(usd_deposit_amount);
+        console.log(wbtc_deposit);
         vm.expectRevert(DeBond.ExceededMaxUSDAmount.selector);
         deBond.depositSavings(wbtc_deposit, ScriptConstants.MATURITY );
 
@@ -81,32 +85,20 @@ contract TestDeBond is Test {
 
 
     function _getBTCAmount(uint256 usd_amount) internal view returns(uint256 wbtcAmt){
-         (uint160 sqrtPriceX96,,,,,, ) = IUniswapV3Pool(ScriptConstants.WBTCUSDCPOOL).slot0();
-         console.log(sqrtPriceX96);
-         uint256 formatted_price = Math.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96)*(10**18), 2**192);
-        console.log(formatted_price);
-         uint256 usdDecimals = ERC20(ScriptConstants.USDC).decimals(); 
-         uint256 btcDecimals = ERC20(ScriptConstants.cbBTC).decimals();
-         uint256 scaledUSDCAmount;
-         if( btcDecimals >= usdDecimals){
-            scaledUSDCAmount = usd_amount * (10 ** (btcDecimals - usdDecimals));
-         }else{
-            scaledUSDCAmount = usd_amount / (10 **(usdDecimals - btcDecimals) );
-         }
-         console.log(scaledUSDCAmount);
-
-         wbtcAmt = Math.mulDiv(scaledUSDCAmount, formatted_price,10**18) ;
+         (,int256 price,,,) = AggregatorV3Interface(ScriptConstants.PRICEFEED).latestRoundData();
+         uint256 decimals = uint256(AggregatorV3Interface(ScriptConstants.PRICEFEED).decimals());
+         uint256 btc_decimals = ERC20(ScriptConstants.cbBTC).decimals();
+         wbtcAmt = (usd_amount * (10**decimals) * (10**btc_decimals)* (10))/(uint256(price));
                  
     }
 
     function testGetUSDAmount() public {
                 vm.startPrank(ScriptConstants.cBBTCWHALE);
-                uint256 btcDecimals = ERC20(ScriptConstants.USDC).decimals();
+                uint256 btcDecimals = ERC20(ScriptConstants.cbBTC).decimals();
 
                 uint256 testWBTC = 1*(10**btcDecimals);
-                (uint256 usdAmt, uint256 formatted_price) = deBond._getUSDAmount(testWBTC);
+                (uint256 usdAmt) = deBond._getUSDAmount(testWBTC);
                 console.log(usdAmt);
-                console.log(formatted_price);
                 vm.stopPrank();
                 
     }
