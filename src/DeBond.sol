@@ -94,9 +94,9 @@ contract DeBond {
         (uint160 sqrtPriceX96,,,,,, ) = IUniswapV3Pool(WBTCUSDCPOOL).slot0(); //Retrieves the current spot price from the USDC/cbBTC pool on UniswapV3
         //Convert the price into a readable price 
         //Price = sqrtPriceX96^2 /(2^192)
-
-        uint256 formatted_price = Math.mulDiv( 2**192, 1,uint256(sqrtPriceX96) * uint256(sqrtPriceX96));
-        //Retrieve the decimals from the USDC token contract
+        uint256 squaredPriceX96 = uint256(sqrtPriceX96) * uint256(sqrtPriceX96);
+        uint256 formatted_price = Math.mulDiv( 2**192, 1, squaredPriceX96 );
+        //Retrieve the decimals from the USDC and WBTC token contracts
         uint256 usdDecimals = uint256(_getDecimals(USDC)); 
         uint256 btcDecimals =uint256(_getDecimals(cbBTC));
 
