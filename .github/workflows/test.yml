@@ -23,6 +23,7 @@ jobs:
       - name: Install Foundry
         run: |
           cd .. 
+          echo $FOUNDRY_BIN_DIR >> $GITHUB_PATH
           foundryup
 
       - name: Show Forge version
