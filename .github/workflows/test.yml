@@ -22,8 +22,9 @@ jobs:
 
       - name: Install Foundry
         run: |
-          cd .. 
+          curl -L https://foundry.paradigm.xyz | bash
           echo $FOUNDRY_BIN_DIR >> $GITHUB_PATH
+          cd .. 
           foundryup
 
       - name: Show Forge version
