@@ -23,7 +23,7 @@ import "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 contract DeBond {
 
-    uint256 constant MAXDEPOSITAMOUNT = 1000;
+    uint256 constant MAXDEPOSITAMOUNT = 1000e6;
     //Defined a custom struct to manage each user's holdings
     struct Holding{
         uint256 balance;
@@ -44,10 +44,12 @@ contract DeBond {
     /// @param depositAmount Amount of WBTC tokens the user would like to deposit 
     /// @param maturity_date Timestamp at which the savings bond should allow the user to withdraw 
     function depositSavings(uint256 depositAmount, uint256 maturity_date ) external {
+            uint256 usdDepositValue = _getUSDAmount(depositAmount);
+
             if(s_isActive[msg.sender]){
                 revert AlreadyDeposited();
             }else if(
-                depositAmount > MAXDEPOSITAMOUNT
+                usdDepositValue > MAXDEPOSITAMOUNT
             ){
                 revert ExceededMaxUSDAmount(depositAmount);
             }else if(
