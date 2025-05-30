@@ -44,13 +44,17 @@ contract DeBond {
     //Stores the total deposits 
     uint256 s_totalDeposits; 
     
-    address constant cbBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; //Coinbase Wrapped BTC (cbBTC) address for base
-    address constant USDC_BTC_AGGREGATOR = 0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F;
-    address constant AAVE_POOL = 0xA238Dd80C259a72e81d7e4664a9801593F98d1c5;
-    address constant ACBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf;
+    address immutable i_WBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; //Coinbase Wrapped BTC (cbBTC) address for base
+    address immutable i_price_feed = 0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F;
+    address immutable i_aave_pool = 0xA238Dd80C259a72e81d7e4664a9801593F98d1c5;
+    address immutable i_aWBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf;
 
 
-    constructor(){
+    constructor(address wbtc, address price_feed, address aave_pool, address aWBTC){
+        i_WBTC = wbtc;
+        i_price_feed = price_feed;
+        i_aave_pool = aave_pool;
+        i_aWBTC = aWBTC;
         s_totalDeposits = 0;
     }
 
@@ -69,7 +73,7 @@ contract DeBond {
             ){
                 revert DepositOutOfRange();
             }else if(
-                IERC20(cbBTC).balanceOf(msg.sender) < depositAmount
+                IERC20(i_WBTC).balanceOf(msg.sender) < depositAmount
             )
             {
                  revert DepositExceedsAccountBalance();
@@ -81,9 +85,9 @@ contract DeBond {
                 s_holdings[msg.sender] = userHolding;
                 s_isActive[msg.sender] = true;
                 s_totalDeposits += depositAmount;
-                IERC20(cbBTC).approve(AAVE_POOL, depositAmount);
-                IERC20(cbBTC).transferFrom(msg.sender, address(this), depositAmount);
-                IPool(AAVE_POOL).supply(cbBTC, depositAmount, address(this),0);
+                IERC20(i_WBTC).approve(i_aave_pool, depositAmount);
+                IERC20(i_WBTC).transferFrom(msg.sender, address(this), depositAmount);
+                IPool(i_aave_pool).supply(i_WBTC, depositAmount, address(this),0);
                 
                 emit HoldingCreated(msg.sender, depositAmount, maturity_date);
             }
@@ -104,8 +108,8 @@ contract DeBond {
                 }else{
                     s_holdings[msg.sender].balance = userBalance - withdrawalAmount;
                     s_totalDeposits -= withdrawalAmount;
-                    IPool(AAVE_POOL).withdraw(cbBTC, withdrawalAmount, address(this));
-                    IERC20(cbBTC).transfer(msg.sender, withdrawalAmount);
+                    IPool(i_aave_pool).withdraw(i_WBTC, withdrawalAmount, address(this));
+                    IERC20(i_WBTC).transfer(msg.sender, withdrawalAmount);
                     emit SavingsWithdrawed(msg.sender, withdrawalAmount);
                 }
             }
@@ -114,9 +118,9 @@ contract DeBond {
 
 
     function _getUSDAmount(uint256 btc_amount) public view returns (uint256 usdAmt){
-        (,int256 price,,,) = AggregatorV3Interface(USDC_BTC_AGGREGATOR).latestRoundData();
-        uint256 btcDecimals = ERC20(cbBTC).decimals();
-        uint256 usdDecimals = uint256(AggregatorV3Interface(USDC_BTC_AGGREGATOR).decimals());
+        (,int256 price,,,) = AggregatorV3Interface(i_price_feed).latestRoundData();
+        uint256 btcDecimals = ERC20(i_WBTC).decimals();
+        uint256 usdDecimals = uint256(AggregatorV3Interface(i_price_feed).decimals());
         uint256 scaled_btc_amount = btc_amount *(10**(SCALER));
         usdAmt = Math.mulDiv(scaled_btc_amount, (10**usdDecimals), uint256(price) * 10**(usdDecimals + btcDecimals));
         
@@ -132,10 +136,12 @@ contract DeBond {
         }
     }
 
-    function updateDepositAmount() external view  returns(uint256 deposit_balance){
+    function updateDepositAmount() external   returns(uint256 deposit_balance){
         if(!s_isActive[msg.sender]){
             revert NoDepositFound();
         }else{
+        uint256 current_balance = _getAAVEBalance(msg.sender);
+        s_holdings[msg.sender].balance = current_balance;
           deposit_balance =  s_holdings[msg.sender].balance;
         
              
@@ -146,7 +152,7 @@ contract DeBond {
     function _getAAVEBalance(address holder) internal view returns(uint256 user_balance){
         if(s_isActive[holder]){
             uint256 user_deposit = s_holdings[holder].balance;
-             uint256 totalAAVEBalance = IERC20(ACBTC).balanceOf(address(this));
+             uint256 totalAAVEBalance = IERC20(i_aWBTC).balanceOf(address(this));
             user_balance = (user_deposit*totalAAVEBalance)/(s_totalDeposits);
         }else{  
             revert NoDepositFound();

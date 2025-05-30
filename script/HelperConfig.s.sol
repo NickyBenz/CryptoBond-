@@ -6,8 +6,8 @@ import {Script} from "lib/forge-std/src/Script.sol";
 library CHAIN_DATA{
     ///BASE
     uint256 constant BASE_CHAIN_ID = 8453;
-    address constant BASE_cbBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; //Coinbase Wrapped BTC (cbBTC) address for base
     address constant BASE_USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC address for base 
+    address constant BASE_cbBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; //Coinbase Wrapped BTC (cbBTC) address for base
     address constant BASE_cBBTCWHALE = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb; //Whale address to fork with on Bbase 
     address constant BASE_PRICEFEED = 0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F;
     address constant BASE_AAVE_POOL = 0xA238Dd80C259a72e81d7e4664a9801593F98d1c5;
@@ -24,7 +24,7 @@ library CHAIN_DATA{
 
     ///OPTIMISM
     uint256 constant OPTIMISM_CHAINID = 10;
-    address constant OPTIMISM_USDC = 0x7F5c764cBc14f9669B88837ca1490cCa17c31607;
+    address constant OPTIMISM_USDC = 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85;
     address constant OPTIMISM_WBTC = 0x68f180fcCe6836688e9084f035309E29Bf0A2095;
     address constant OPTIMISM_WHALE = 0x078f358208685046a11C85e8ad32895DED33A249;
     address constant OPTIMISM_AAVE_POOL = 0x794a61358D6845594F94dc1DB02A252b5b4814aD;
@@ -47,7 +47,9 @@ contract HelperConfig is Script{
         address awbtc;
     }
 
-    function getActiveConfig() public returns (ChainConfig memory config){
+    ChainConfig public config; 
+
+    function setActiveConfig() public {
         if(block.chainid == CHAIN_DATA.MAIN_NET_CHAINID){
             config = getMainNetConfig();
         }else if(block.chainid == CHAIN_DATA.BASE_CHAIN_ID){
@@ -69,7 +71,7 @@ contract HelperConfig is Script{
         );
     }
 
-    function getOptimismConfig() public returns (ChainConfig memory){
+    function getOptimismConfig() public pure returns (ChainConfig memory){
         return ChainConfig(
             CHAIN_DATA.OPTIMISM_WBTC,
             CHAIN_DATA.OPTIMISM_USDC,
@@ -80,7 +82,7 @@ contract HelperConfig is Script{
         );
     }
 
-    function getMainNetConfig() public returns (ChainConfig memory){
+    function getMainNetConfig() public pure returns (ChainConfig memory){
             return ChainConfig(
             CHAIN_DATA.MAIN_NET_WBTC,
             CHAIN_DATA.MAIN_NET_USDC,

@@ -10,5 +10,5 @@ test:
 deploy:
 	forge script script/DeployDeBond.s.sol:DeployDeBond --rpc-url $(BASE_MAIN_NET_L2_URL) -vvv
 
-fork:
+fork-base:
 	forge test --fork-url $(BASE_MAIN_NET_L2_URL) -vv

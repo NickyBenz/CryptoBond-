@@ -10,10 +10,7 @@ import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 library ScriptConstants {
-    address constant cbBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; //Coinbase Wrapped BTC (cbBTC) address for base
-    address constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC address for base 
-    address constant cBBTCWHALE = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
-    address constant PRICEFEED = 0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F;
+   
     uint256 constant MATURITY = 1e3;
     uint256 constant USD_DEPOSIT_AMOUNT = 500e6; //User will try to deposit 500 USD
     uint256 constant WBTC_APROVE_AMOUNT = 1e8;
@@ -26,19 +23,23 @@ contract DeployDeBond is Script{
     
     
     
-    function run() public returns(DeBond, uint256 wbtc_deposit_amount) {
+    function run() public returns(DeBond, address whale, uint256 wbtc_deposit_amount) {
         
         vm.startBroadcast(); //Starts broadcasting to blockchain
 
         HelperConfig helperConfig = new HelperConfig();
 
-        HelperConfig.ChainConfig memory config = helperConfig.getActiveConfig();
+        helperConfig.setActiveConfig();
 
-        
+        (address wbtc, address usdc,address chain_whale,  address aave_pool, address price_feed, address awbtc)  = helperConfig.config();
 
-        DeBond deBond = new DeBond(); //Deploys the contract to the chain
+        whale = chain_whale;
 
-        wbtc_deposit_amount = _getBTCAmount(usd_amount, price_feed, usdc, wbtc);
+        wbtc_deposit_amount = _getBTCAmount(ScriptConstants.USD_DEPOSIT_AMOUNT, price_feed, usdc, wbtc);
+
+
+        DeBond deBond = new DeBond(wbtc, price_feed, aave_pool, awbtc); //Deploys the contract to the chain
+
 
         vm.stopBroadcast();        
         // vm.startPrank(ScriptConstants.cBBTCWHALE); //Start a prank as a WBTC whale 
@@ -48,10 +49,10 @@ contract DeployDeBond is Script{
         //  wbtc_deposit_amount =  _getBTCAmount(ScriptConstants.USD_DEPOSIT_AMOUNT); //$500 USD to decimals 
         // IERC20(ScriptConstants.cbBTC).approve(address(deBond), ScriptConstants.WBTC_APROVE_AMOUNT); //Approves the contract to recieve tokens
 
-        // return (deBond, wbtc_deposit_amount);
+         return (deBond, whale, wbtc_deposit_amount);
     }   
     
-    function _getBTCAmount(uint256 usd_amount, address price_feed, address usdc, address wbtc) internal returns (uint256 wbtc_amt){
+    function _getBTCAmount(uint256 usd_amount, address price_feed, address usdc, address wbtc) internal view returns (uint256 wbtc_amt){
               (,int256 price,,,) = AggregatorV3Interface(price_feed).latestRoundData();
             uint256 usd_decimals = AggregatorV3Interface(price_feed).decimals();
              uint256 usdc_decimals = ERC20(usdc).decimals();
@@ -59,12 +60,4 @@ contract DeployDeBond is Script{
              wbtc_amt = Math.mulDiv(usd_amount, 10**(usd_decimals+wbtc_decimals), uint256(price)*10**(usdc_decimals));
     }
 
-    //  function _getBTCAmount(uint256 usd_amount) internal view returns(uint256 wbtc_amt){
-    //     (,int256 price,,,) = AggregatorV3Interface(ScriptConstants.PRICEFEED).latestRoundData();
-    //     uint256 usd_decimals = AggregatorV3Interface(ScriptConstants.PRICEFEED).decimals();
-    //     uint256 usdc_decimals = ERC20(ScriptConstants.USDC).decimals();
-    //     uint256 wbtc_decimals = ERC20(ScriptConstants.cbBTC).decimals();
-    //     wbtc_amt = Math.mulDiv(usd_amount, 10**(usd_decimals+wbtc_decimals), uint256(price)*10**(usdc_decimals));
-
-    // }
 }

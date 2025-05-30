@@ -13,23 +13,24 @@ import {AggregatorV3Interface} from "../lib/chainlink-local/src/data-feeds/inter
 contract TestDeBond is Test {
     DeployDeBond deployer;
     DeBond deBond;
+    address whale;
     uint256 wbtc_deposit;
     function setUp() public {
         deployer = new DeployDeBond();
-        (deBond, wbtc_deposit) = deployer.run();
+        (deBond, whale, wbtc_deposit ) = deployer.run();
         
     }
     ////////////////////////////////External Function Test/////////////////////////////////////////
 
     function testDeposit() public {
-        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        vm.startPrank(whale);
         deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
 
         vm.stopPrank();
     }
 
     function testUpdateAmount() public {
-        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        vm.startPrank(whale);
         deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
         uint256 current_timestamp = block.timestamp;
         vm.warp(current_timestamp + ScriptConstants.ONEMONTHEPOCHTIME);
@@ -41,7 +42,7 @@ contract TestDeBond is Test {
 
     function testDepositFailOutOfRange(uint256 usd_deposit) public{
         vm.assume((usd_deposit > 1e9 && usd_deposit < 2e9) || usd_deposit < 1e2);
-        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        vm.startPrank(whale);
         vm.expectRevert(DeBond.DepositOutOfRange.selector);
         deBond.depositSavings(usd_deposit,ScriptConstants.MATURITY);
         vm.stopPrank();
@@ -61,7 +62,7 @@ contract TestDeBond is Test {
 
 
     function testWithdrawal() public {
-        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        vm.startPrank(whale);
         deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
         uint256 curr_timestamp = block.timestamp;
         vm.warp(curr_timestamp + ScriptConstants.MATURITY);
@@ -70,14 +71,14 @@ contract TestDeBond is Test {
     }
 
     function testWithdrawalFailsIfWithdrawedBeforeMaturity() public {
-        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        vm.startPrank(whale);
         deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
         deBond.withDrawSavings(wbtc_deposit);
         vm.stopPrank();
     }
 
     function testWithdrawalFailIfAmountExceedsDepositBalance() public {
-        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        vm.startPrank(whale);
         deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
         uint256 curr_timestamp = block.timestamp;
         vm.warp(curr_timestamp + ScriptConstants.MATURITY);
@@ -88,7 +89,7 @@ contract TestDeBond is Test {
     }
 
     function testUserCanCheckDepositValue() public{
-        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        vm.startPrank(whale);
         deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
         uint256 actual_deposit_value = deBond.checkDepositAmount();
         vm.stopPrank();
