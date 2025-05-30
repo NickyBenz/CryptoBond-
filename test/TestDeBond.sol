@@ -18,9 +18,28 @@ contract TestDeBond is Test {
         deployer = new DeployDeBond();
         deBond = deployer.run();
     }
+    
+    function testDeposit() public {
+        console.log(_getBTCAmount(ScriptConstants.USD_DEPOSIT_AMOUNT));
+    }
 
+    function testWithdrawal() public {
+        
+    }
 
+    function testGetUSDAmount() public {
+        uint256 usd_amount = deBond._getUSDAmount(ScriptConstants.WBTC_DEPOSIT_AMOUNT);
+        console.log(usd_amount);
+    }
 
+    function _getBTCAmount(uint256 usd_amount) public returns(uint256 wbtc_amt){
+        (,int256 price,,,) = AggregatorV3Interface(ScriptConstants.PRICEFEED).latestRoundData();
+        uint256 usd_decimals = AggregatorV3Interface(ScriptConstants.PRICEFEED).decimals();
+        uint256 usdc_decimals = ERC20(ScriptConstants.USDC).decimals();
+        uint256 wbtc_decimals = ERC20(ScriptConstants.cbBTC).decimals();
+        wbtc_amt = Math.mulDiv(usd_amount, 10**(usd_decimals+wbtc_decimals), uint256(price)*10**(usdc_decimals));
+
+    }
     
 
 }

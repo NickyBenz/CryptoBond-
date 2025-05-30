@@ -25,7 +25,8 @@ contract DeBond {
     error AlreadyDeposited(); //Error to revert if user has already deposited a savings bond 
     error WithdrawalExceedsBalance(); //Error to revert when user requested withdrawal exceeds the amount they had initially deposited
     error NoDepositFound(); //Error to revert when a user tries to withdraw without a deposit   
-    uint256 constant MAXDEPOSITAMOUNT = 1000e18;
+    uint256 constant MAXDEPOSITAMOUNT = 1e3;
+    uint256 constant SCALER = 18;
     //Defined a custom struct to manage each user's holdings
     struct Holding{
         uint256 balance;
@@ -38,7 +39,6 @@ contract DeBond {
     //Mapping to check if the user has an active holding
     mapping(address => bool) s_isActive;
     
-    address constant  WBTCUSDCPOOL = 0xfBB6Eed8e7aa03B138556eeDaF5D271A5E1e43ef; //Uniswap V3 USDC/cbBTC pool on base to retrieve price 
     address constant cbBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; //Coinbase Wrapped BTC (cbBTC) address for base
     address constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC address for base 
     address constant usdc_btc_aggregator = 0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F;
@@ -96,10 +96,10 @@ contract DeBond {
         (,int256 price,,,) = AggregatorV3Interface(usdc_btc_aggregator).latestRoundData();
         uint256 btcDecimals = ERC20(cbBTC).decimals();
         uint256 usdDecimals = uint256(AggregatorV3Interface(usdc_btc_aggregator).decimals());
-        uint256 scaled_btc_amount = btc_amount * 10 **18;
+        uint256 scaled_btc_amount = btc_amount *(10**(SCALER));
         usdAmt = Math.mulDiv(scaled_btc_amount, (10**usdDecimals), uint256(price) * 10**(usdDecimals + btcDecimals));
         
-
+ 
     }
 
     function _createUserHolding(uint256 depositAmount, uint256 maturityDate) internal pure returns(Holding memory){
