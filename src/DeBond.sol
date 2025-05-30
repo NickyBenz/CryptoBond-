@@ -13,7 +13,7 @@ import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol"
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {AggregatorV3Interface} from "../lib/chainlink-local/src/data-feeds/interfaces/AggregatorV3Interface.sol";
-
+import {IPool} from "../lib/aave/contracts/interfaces/IPool.sol";
 /// @title DeBond, crypto savings bond
 /// @author Nikhil Bezwada
 /// @notice Allows users to deposit WBTC tokens (after approving the contract) at a maturity with a fixed limit of $1000
@@ -25,7 +25,7 @@ contract DeBond {
     error AlreadyDeposited(); //Error to revert if user has already deposited a savings bond 
     error WithdrawalExceedsDepositBalance(); //Error to revert when user requested withdrawal exceeds the amount they had initially deposited
     error NoDepositFound(); //Error to revert when a user tries to withdraw without a deposit
-   
+    error InvalidMaturity();
     uint256 constant MAXDEPOSITAMOUNT = 1e3;
     uint256 constant MINDEPOSITAMOUNT = 1e2;
     uint256 constant SCALER = 18;
@@ -40,10 +40,21 @@ contract DeBond {
 
     //Mapping to check if the user has an active holding
     mapping(address => bool) s_isActive;
+
+    //Stores the total deposits 
+    uint256 s_totalDeposits; 
     
     address constant cbBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; //Coinbase Wrapped BTC (cbBTC) address for base
-    address constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC address for base 
-    address constant usdc_btc_aggregator = 0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F;
+    address constant USDC_BTC_AGGREGATOR = 0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F;
+    address constant AAVE_POOL = 0xA238Dd80C259a72e81d7e4664a9801593F98d1c5;
+    address constant ACBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf;
+
+
+    constructor(){
+        s_totalDeposits = 0;
+    }
+
+
 
     /// @notice Deposit WBTC tokens to the contract once contract has recieved approval
     /// @param depositAmount Amount of WBTC tokens the user would like to deposit 
@@ -62,12 +73,18 @@ contract DeBond {
             )
             {
                  revert DepositExceedsAccountBalance();
+            }else if( maturity_date > block.timestamp){
+                revert InvalidMaturity();
             }
             else{
                 Holding memory userHolding = _createUserHolding(depositAmount, maturity_date);
                 s_holdings[msg.sender] = userHolding;
                 s_isActive[msg.sender] = true;
+                s_totalDeposits += depositAmount;
+                IERC20(cbBTC).approve(AAVE_POOL, depositAmount);
                 IERC20(cbBTC).transferFrom(msg.sender, address(this), depositAmount);
+                IPool(AAVE_POOL).supply(cbBTC, depositAmount, address(this),0);
+                
                 emit HoldingCreated(msg.sender, depositAmount, maturity_date);
             }
 
@@ -86,6 +103,8 @@ contract DeBond {
                     revert CannotWithdrawBeforeMaturity(maturityTime);
                 }else{
                     s_holdings[msg.sender].balance = userBalance - withdrawalAmount;
+                    s_totalDeposits -= withdrawalAmount;
+                    IPool(AAVE_POOL).withdraw(cbBTC, withdrawalAmount, address(this));
                     IERC20(cbBTC).transfer(msg.sender, withdrawalAmount);
                     emit SavingsWithdrawed(msg.sender, withdrawalAmount);
                 }
@@ -95,9 +114,9 @@ contract DeBond {
 
 
     function _getUSDAmount(uint256 btc_amount) public view returns (uint256 usdAmt){
-        (,int256 price,,,) = AggregatorV3Interface(usdc_btc_aggregator).latestRoundData();
+        (,int256 price,,,) = AggregatorV3Interface(USDC_BTC_AGGREGATOR).latestRoundData();
         uint256 btcDecimals = ERC20(cbBTC).decimals();
-        uint256 usdDecimals = uint256(AggregatorV3Interface(usdc_btc_aggregator).decimals());
+        uint256 usdDecimals = uint256(AggregatorV3Interface(USDC_BTC_AGGREGATOR).decimals());
         uint256 scaled_btc_amount = btc_amount *(10**(SCALER));
         usdAmt = Math.mulDiv(scaled_btc_amount, (10**usdDecimals), uint256(price) * 10**(usdDecimals + btcDecimals));
         
@@ -108,9 +127,30 @@ contract DeBond {
         if(!s_isActive[msg.sender]){
             revert NoDepositFound();
         }else{
-            return s_holdings[msg.sender].balance;
+            deposit_balance = s_holdings[msg.sender].balance;
+        
+        }
+    }
+
+    function updateDepositAmount() external view  returns(uint256 deposit_balance){
+        if(!s_isActive[msg.sender]){
+            revert NoDepositFound();
+        }else{
+          deposit_balance =  s_holdings[msg.sender].balance;
+        
+             
         }
 
+    }   
+
+    function _getAAVEBalance(address holder) internal view returns(uint256 user_balance){
+        if(s_isActive[holder]){
+            uint256 user_deposit = s_holdings[holder].balance;
+             uint256 totalAAVEBalance = IERC20(ACBTC).balanceOf(address(this));
+            user_balance = (user_deposit*totalAAVEBalance)/(s_totalDeposits);
+        }else{  
+            revert NoDepositFound();
+        }
     }
 
     function _createUserHolding(uint256 depositAmount, uint256 maturityDate) internal pure returns(Holding memory){
@@ -125,6 +165,7 @@ contract DeBond {
     function _getDecimals(address token_address) internal view returns (uint8 decimals) {
             return ERC20(token_address).decimals();
     }
-
+     
+    
 
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import {Test,console} from "lib/forge-std/src/Test.sol";
@@ -26,6 +26,17 @@ contract TestDeBond is Test {
         deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
 
         vm.stopPrank();
+    }
+
+    function testUpdateAmount() public {
+        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
+        uint256 current_timestamp = block.timestamp;
+        vm.warp(current_timestamp + ScriptConstants.ONEMONTHEPOCHTIME);
+        uint256 aave_deposit = deBond.updateDepositAmount();
+        vm.stopPrank();
+        console.log(aave_deposit);
+     
     }
 
     function testDepositFailOutOfRange(uint256 usd_deposit) public{
