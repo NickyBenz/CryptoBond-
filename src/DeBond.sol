@@ -20,12 +20,14 @@ import {AggregatorV3Interface} from "../lib/chainlink-local/src/data-feeds/inter
 
 contract DeBond {
     error CannotWithdrawBeforeMaturity(uint256 maturity); //Error to revert whenever a user attempts to withdraw from their bond before their maturity date
-    error ExceededMaxUSDAmount(); //Error to revert when the user attempts to deposit above the max withdrawal rate
+    error DepositOutOfRange(); //Error to revert when the user attempts to deposit above the max withdrawal rate
     error DepositExceedsAccountBalance(); //Error to revert when the user attemps to deposit a token balance higher than their own balance of the token
     error AlreadyDeposited(); //Error to revert if user has already deposited a savings bond 
-    error WithdrawalExceedsBalance(); //Error to revert when user requested withdrawal exceeds the amount they had initially deposited
-    error NoDepositFound(); //Error to revert when a user tries to withdraw without a deposit   
+    error WithdrawalExceedsDepositBalance(); //Error to revert when user requested withdrawal exceeds the amount they had initially deposited
+    error NoDepositFound(); //Error to revert when a user tries to withdraw without a deposit
+   
     uint256 constant MAXDEPOSITAMOUNT = 1e3;
+    uint256 constant MINDEPOSITAMOUNT = 1e2;
     uint256 constant SCALER = 18;
     //Defined a custom struct to manage each user's holdings
     struct Holding{
@@ -52,9 +54,9 @@ contract DeBond {
             if(s_isActive[msg.sender]){
                 revert AlreadyDeposited();
             }else if(
-                usdDepositValue > MAXDEPOSITAMOUNT
+                usdDepositValue > MAXDEPOSITAMOUNT || usdDepositValue < MINDEPOSITAMOUNT
             ){
-                revert ExceededMaxUSDAmount();
+                revert DepositOutOfRange();
             }else if(
                 IERC20(cbBTC).balanceOf(msg.sender) < depositAmount
             )
@@ -79,7 +81,7 @@ contract DeBond {
                 Holding memory userHolding = s_holdings[msg.sender];
                 (uint256 userBalance, uint256 maturityTime) = (userHolding.balance, userHolding.maturity);
                 if(withdrawalAmount > userBalance){
-                    revert WithdrawalExceedsBalance();
+                    revert WithdrawalExceedsDepositBalance();
                 }else if(maturityTime > _blockTimeStamp()){
                     revert CannotWithdrawBeforeMaturity(maturityTime);
                 }else{
@@ -100,6 +102,15 @@ contract DeBond {
         usdAmt = Math.mulDiv(scaled_btc_amount, (10**usdDecimals), uint256(price) * 10**(usdDecimals + btcDecimals));
         
  
+    }
+
+    function checkDepositAmount() external view returns(uint256 deposit_balance){
+        if(!s_isActive[msg.sender]){
+            revert NoDepositFound();
+        }else{
+            return s_holdings[msg.sender].balance;
+        }
+
     }
 
     function _createUserHolding(uint256 depositAmount, uint256 maturityDate) internal pure returns(Holding memory){

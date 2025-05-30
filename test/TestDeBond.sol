@@ -13,33 +13,82 @@ import {AggregatorV3Interface} from "../lib/chainlink-local/src/data-feeds/inter
 contract TestDeBond is Test {
     DeployDeBond deployer;
     DeBond deBond;
-    address user;
+    uint256 wbtc_deposit;
     function setUp() public {
         deployer = new DeployDeBond();
-        deBond = deployer.run();
-    }
-    
-    function testDeposit() public {
-        console.log(_getBTCAmount(ScriptConstants.USD_DEPOSIT_AMOUNT));
-    }
-
-    function testWithdrawal() public {
+        (deBond, wbtc_deposit) = deployer.run();
         
     }
+    ////////////////////////////////External Function Test/////////////////////////////////////////
 
-    function testGetUSDAmount() public {
-        uint256 usd_amount = deBond._getUSDAmount(ScriptConstants.WBTC_DEPOSIT_AMOUNT);
+    function testDeposit() public {
+        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
+
+        vm.stopPrank();
+    }
+
+    function testDepositFailOutOfRange(uint256 usd_deposit) public{
+        vm.assume((usd_deposit > 1e9 && usd_deposit < 2e9) || usd_deposit < 1e2);
+        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        vm.expectRevert(DeBond.DepositOutOfRange.selector);
+        deBond.depositSavings(usd_deposit,ScriptConstants.MATURITY);
+        vm.stopPrank();
+    }
+
+      
+
+    function testDepositFailIfAmountExceedsTokenBalance() public{
+        uint256 privKey = vm.envUint("DEV_PRIVKEY"); //Junk account
+        address user = vm.addr(privKey); //User with no tokens
+        vm.startPrank(user);    
+        vm.expectRevert(DeBond.DepositExceedsAccountBalance.selector);
+        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
+        vm.stopPrank();
+    }
+
+
+
+    function testWithdrawal() public {
+        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
+        uint256 curr_timestamp = block.timestamp;
+        vm.warp(curr_timestamp + ScriptConstants.MATURITY);
+        deBond.withDrawSavings(wbtc_deposit);
+        vm.stopPrank();
+    }
+
+    function testWithdrawalFailsIfWithdrawedBeforeMaturity() public {
+        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
+        deBond.withDrawSavings(wbtc_deposit);
+        vm.stopPrank();
+    }
+
+    function testWithdrawalFailIfAmountExceedsDepositBalance() public {
+        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
+        uint256 curr_timestamp = block.timestamp;
+        vm.warp(curr_timestamp + ScriptConstants.MATURITY);
+        vm.expectRevert(DeBond.WithdrawalExceedsDepositBalance.selector);
+        uint256 withdrawal_amount = wbtc_deposit +1; 
+        deBond.withDrawSavings(withdrawal_amount);
+        vm.stopPrank();
+    }
+
+    function testUserCanCheckDepositValue() public{
+        vm.startPrank(ScriptConstants.cBBTCWHALE);
+        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
+        uint256 actual_deposit_value = deBond.checkDepositAmount();
+        vm.stopPrank();
+        assertEq(actual_deposit_value, wbtc_deposit);
+    }
+
+    function testGetUSDAmount() public view {
+        uint256 usd_amount = deBond._getUSDAmount(ScriptConstants.WBTC_APROVE_AMOUNT);
         console.log(usd_amount);
     }
-
-    function _getBTCAmount(uint256 usd_amount) public returns(uint256 wbtc_amt){
-        (,int256 price,,,) = AggregatorV3Interface(ScriptConstants.PRICEFEED).latestRoundData();
-        uint256 usd_decimals = AggregatorV3Interface(ScriptConstants.PRICEFEED).decimals();
-        uint256 usdc_decimals = ERC20(ScriptConstants.USDC).decimals();
-        uint256 wbtc_decimals = ERC20(ScriptConstants.cbBTC).decimals();
-        wbtc_amt = Math.mulDiv(usd_amount, 10**(usd_decimals+wbtc_decimals), uint256(price)*10**(usdc_decimals));
-
-    }
+   
     
 
 }
