@@ -13,7 +13,7 @@ library ScriptConstants {
    
     uint256 constant MATURITY = 1e3;
     uint256 constant USD_DEPOSIT_AMOUNT = 500e6; //User will try to deposit 500 USD
-    uint256 constant WBTC_APROVE_AMOUNT = 1e8;
+    uint256 constant WBTC_APPROVE_AMOUNT = 1e8;
     uint256 constant SCALAR =18;
     uint256 constant ONEMONTHEPOCHTIME = 28e6;
 
@@ -22,8 +22,10 @@ library ScriptConstants {
 contract DeployDeBond is Script{
     
     
-    
-    function run() public returns(DeBond, address whale, uint256 wbtc_deposit_amount) {
+    address aave_pool;
+    address price_feed; 
+    address awbtc; 
+    function run() public returns(DeBond, address wbtc, address usdc,  address whale, uint256 wbtc_deposit_amount) {
         
         vm.startBroadcast(); //Starts broadcasting to blockchain
 
@@ -31,11 +33,9 @@ contract DeployDeBond is Script{
 
         helperConfig.setActiveConfig();
 
-        (address wbtc, address usdc,address chain_whale,  address aave_pool, address price_feed, address awbtc)  = helperConfig.config();
+        ( wbtc,  usdc, whale ,   aave_pool,  price_feed,  awbtc)  = helperConfig.config();
 
-        whale = chain_whale;
-
-        wbtc_deposit_amount = _getBTCAmount(ScriptConstants.USD_DEPOSIT_AMOUNT, price_feed, usdc, wbtc);
+        wbtc_deposit_amount = _getBTCAmount(ScriptConstants.USD_DEPOSIT_AMOUNT, usdc, wbtc);
 
 
         DeBond deBond = new DeBond(wbtc, price_feed, aave_pool, awbtc); //Deploys the contract to the chain
@@ -43,16 +43,13 @@ contract DeployDeBond is Script{
 
         vm.stopBroadcast();        
         // vm.startPrank(ScriptConstants.cBBTCWHALE); //Start a prank as a WBTC whale 
+      
         
-        
-        // DeBond deBond = new DeBond(); //Deploys the contract to the chain
-        //  wbtc_deposit_amount =  _getBTCAmount(ScriptConstants.USD_DEPOSIT_AMOUNT); //$500 USD to decimals 
-        // IERC20(ScriptConstants.cbBTC).approve(address(deBond), ScriptConstants.WBTC_APROVE_AMOUNT); //Approves the contract to recieve tokens
 
-         return (deBond, whale, wbtc_deposit_amount);
+         return (deBond, wbtc, usdc,  whale, wbtc_deposit_amount);
     }   
     
-    function _getBTCAmount(uint256 usd_amount, address price_feed, address usdc, address wbtc) internal view returns (uint256 wbtc_amt){
+    function _getBTCAmount(uint256 usd_amount,  address usdc, address wbtc) internal view returns (uint256 wbtc_amt){
               (,int256 price,,,) = AggregatorV3Interface(price_feed).latestRoundData();
             uint256 usd_decimals = AggregatorV3Interface(price_feed).decimals();
              uint256 usdc_decimals = ERC20(usdc).decimals();

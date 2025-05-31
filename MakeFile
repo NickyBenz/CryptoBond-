@@ -1,14 +1,46 @@
 include .env
 export $(shell sed 's/=.*//' .env)
 
+#Place API Keys into your own .env file and use for deployment/fork testing
+
+install:
+	curl -L https://foundry.paradigm.xyz 
+
+update:
+	foundryup
+
+
 build:
 	forge build
 
 test:
 	forge test -vvvv
 
-deploy:
-	forge script script/DeployDeBond.s.sol:DeployDeBond --rpc-url $(BASE_MAIN_NET_L2_URL) -vvv
+fork-main-net:
+	forge test --fork-url ${ETH_L1_MAIN_NET_URL} -vvvv 
+
+fork-optimism:
+	forge test --fork-url ${OP_MAIN_NET_L2_URL} -vvvv
 
 fork-base:
-	forge test --fork-url $(BASE_MAIN_NET_L2_URL) -vv
+	forge test  --fork-url $(BASE_MAIN_NET_L2_URL) -vvvv
+
+
+deploy-optimism:
+	forge script script/DeployDeBond.s.sol:DeployDeBond --rpc-url $(OP_MAIN_NET_L2_URL) -vvv
+
+deploy-main-net:
+	forge script script/DeployDeBond.s.sol:DeployDeBond --rpc-url $(ETH_L1_MAIN_NET_URL) -vvv
+
+
+deploy-base:
+	forge script script/DeployDeBond.s.sol:DeployDeBond --rpc-url $(BASE_MAIN_NET_L2_URL) -vvv
+
+
+
+all:
+	install update build 
+
+
+
+

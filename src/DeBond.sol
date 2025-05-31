@@ -19,6 +19,7 @@ import {IPool} from "../lib/aave/contracts/interfaces/IPool.sol";
 /// @notice Allows users to deposit WBTC tokens (after approving the contract) at a maturity with a fixed limit of $1000
 
 contract DeBond {
+    using Math for uint256;
     error CannotWithdrawBeforeMaturity(uint256 maturity); //Error to revert whenever a user attempts to withdraw from their bond before their maturity date
     error DepositOutOfRange(); //Error to revert when the user attempts to deposit above the max withdrawal rate
     error DepositExceedsAccountBalance(); //Error to revert when the user attemps to deposit a token balance higher than their own balance of the token
@@ -41,13 +42,13 @@ contract DeBond {
     //Mapping to check if the user has an active holding
     mapping(address => bool) s_isActive;
 
-    //Stores the total deposits 
+    //Stores the total value of deposits 
     uint256 s_totalDeposits; 
     
-    address immutable i_WBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; //Coinbase Wrapped BTC (cbBTC) address for base
-    address immutable i_price_feed = 0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F;
-    address immutable i_aave_pool = 0xA238Dd80C259a72e81d7e4664a9801593F98d1c5;
-    address immutable i_aWBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf;
+    address immutable i_WBTC; //Wrapped BTC address
+    address immutable i_price_feed; // BTC/USD price feed
+    address immutable i_aave_pool; // AAVE pool address
+    address immutable i_aWBTC; // AAVE Wrapped BTC address
 
 
     constructor(address wbtc, address price_feed, address aave_pool, address aWBTC){
@@ -60,9 +61,11 @@ contract DeBond {
 
 
 
-    /// @notice Deposit WBTC tokens to the contract once contract has recieved approval
+    /// @notice Deposit WBTC tokens to the contract once contract has recieved token approval and stores them in an AAVE pool
     /// @param depositAmount Amount of WBTC tokens the user would like to deposit 
     /// @param maturity_date Timestamp at which the savings bond should allow the user to withdraw 
+    /// Deposits cannot be made below $100 and above $1000.
+    
     function depositSavings(uint256 depositAmount, uint256 maturity_date ) external {
             (uint256 usdDepositValue) = _getUSDAmount(depositAmount);
 
@@ -95,6 +98,7 @@ contract DeBond {
     }
     /// @notice Withdraw tokens from contract
     /// @param withdrawalAmount Amount of WBTC tokens the user would like to withdraw 
+    /// Withdrawals cannot be made before maturity
     function withDrawSavings(uint256 withdrawalAmount) external {
             if(!(s_isActive[msg.sender])){
                 revert NoDepositFound();
@@ -116,8 +120,10 @@ contract DeBond {
     }
 
 
-
-    function _getUSDAmount(uint256 btc_amount) public view returns (uint256 usdAmt){
+    /// @notice Gets the value of BTC in USD
+    /// @param btc_amount  amount of BTC deposited
+    /// @return usdAmt the corresponding value of USD
+    function _getUSDAmount(uint256 btc_amount) internal view returns (uint256 usdAmt){
         (,int256 price,,,) = AggregatorV3Interface(i_price_feed).latestRoundData();
         uint256 btcDecimals = ERC20(i_WBTC).decimals();
         uint256 usdDecimals = uint256(AggregatorV3Interface(i_price_feed).decimals());
@@ -127,38 +133,46 @@ contract DeBond {
  
     }
 
-    function checkDepositAmount() external view returns(uint256 deposit_balance){
+    /// @notice Allows user to check deposit amount based on how much interest it has accrued from AAVE
+    /// @return deposit_balance The value of the user's deposit
+    function checkDepositAmount() external  returns(uint256 deposit_balance){
         if(!s_isActive[msg.sender]){
             revert NoDepositFound();
         }else{
-            deposit_balance = s_holdings[msg.sender].balance;
+            deposit_balance = _updateDepositAmount(msg.sender);
         
         }
     }
 
-    function updateDepositAmount() external   returns(uint256 deposit_balance){
-        if(!s_isActive[msg.sender]){
+    /// @notice Updates the user balance based on the interest accrued from AAVE.
+    /// @return deposit_balance The updatedvalue of the user's deposit
+    function _updateDepositAmount(address holder) internal   returns(uint256 deposit_balance){
+        if(!s_isActive[holder]){
             revert NoDepositFound();
         }else{
-        uint256 current_balance = _getAAVEBalance(msg.sender);
-        s_holdings[msg.sender].balance = current_balance;
-          deposit_balance =  s_holdings[msg.sender].balance;
+        uint256 current_balance = Math.mulDiv(_getAAVEBalance(holder),1,10**(SCALER));
+        s_holdings[holder].balance = current_balance;
+          deposit_balance =  s_holdings[holder].balance;
         
              
         }
 
     }   
-
+    /// @notice Retrieves the updated user balance from AAVE.
+    /// @return user_balance The updated value of the user's deposit
     function _getAAVEBalance(address holder) internal view returns(uint256 user_balance){
         if(s_isActive[holder]){
             uint256 user_deposit = s_holdings[holder].balance;
              uint256 totalAAVEBalance = IERC20(i_aWBTC).balanceOf(address(this));
-            user_balance = (user_deposit*totalAAVEBalance)/(s_totalDeposits);
+             uint256 scaled_user_deposit = user_deposit * 10**(SCALER);
+            user_balance = Math.mulDiv(scaled_user_deposit, totalAAVEBalance, s_totalDeposits);
         }else{  
             revert NoDepositFound();
         }
     }
-
+    /// @notice Creates a new struct to represent a user's holdings
+    /// @param depositAmount The amount the user has deposited
+    /// @param maturityDate The maturity date chosen by the user
     function _createUserHolding(uint256 depositAmount, uint256 maturityDate) internal pure returns(Holding memory){
         Holding memory newHolding = Holding(depositAmount, maturityDate);
         return newHolding;
@@ -168,10 +182,25 @@ contract DeBond {
         return uint256(block.timestamp);
     }
 
+
+/////////////////////////////////////   Getters     ///////////////////////////////////////////
+    function _getIWBTC() external view returns(address){
+        return i_WBTC;
+    }
+
     function _getDecimals(address token_address) internal view returns (uint8 decimals) {
             return ERC20(token_address).decimals();
     }
      
+    function getPriceFeed() external view returns(address){
+        return i_price_feed;
+    }
     
+    function getAAVEPool() external view returns(address){
+        return i_aave_pool;
+    }
 
+    function getAWBTC() external view returns (address){
+        return i_aWBTC;
+    }
 }

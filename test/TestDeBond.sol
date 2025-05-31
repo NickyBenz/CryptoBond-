@@ -12,13 +12,19 @@ import {AggregatorV3Interface} from "../lib/chainlink-local/src/data-feeds/inter
 
 contract TestDeBond is Test {
     DeployDeBond deployer;
+    address wbtc;
+    address usdc;
     DeBond deBond;
     address whale;
     uint256 wbtc_deposit;
     function setUp() public {
         deployer = new DeployDeBond();
-        (deBond, whale, wbtc_deposit ) = deployer.run();
-        
+        (deBond, wbtc, usdc , whale, wbtc_deposit ) = deployer.run();
+        vm.startPrank(whale);
+        IERC20(wbtc).approve(address(deBond), ScriptConstants.WBTC_APPROVE_AMOUNT);
+        vm.stopPrank();
+
+    
     }
     ////////////////////////////////External Function Test/////////////////////////////////////////
 
@@ -29,12 +35,12 @@ contract TestDeBond is Test {
         vm.stopPrank();
     }
 
-    function testUpdateAmount() public {
+    function testCheckUpdateAmount() public {
         vm.startPrank(whale);
         deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
         uint256 current_timestamp = block.timestamp;
         vm.warp(current_timestamp + ScriptConstants.ONEMONTHEPOCHTIME);
-        uint256 aave_deposit = deBond.updateDepositAmount();
+        uint256 aave_deposit = deBond.checkDepositAmount();
         vm.stopPrank();
         console.log(aave_deposit);
      
@@ -96,11 +102,8 @@ contract TestDeBond is Test {
         assertEq(actual_deposit_value, wbtc_deposit);
     }
 
-    function testGetUSDAmount() public view {
-        uint256 usd_amount = deBond._getUSDAmount(ScriptConstants.WBTC_APROVE_AMOUNT);
-        console.log(usd_amount);
-    }
-   
     
+    
+
 
 }

@@ -5,12 +5,16 @@
 Crypto Legacy Bond is an innovative blockchain-based savings vehicle. This unique product recognizes the absence of similar offerings in the market and aims to provide a secure and meaningful way to save cryptocurrencies.
 
 ## Features
-Time-Locked Smart Contracts: Users can lock cryptocurrencies (WBTC, ETH, USDC, USDT) in a smart contract on Base L2 (Ethereum layer-2) until a customizable maturity date. Withdrawals or sales are prohibited before maturity, ensuring the funds are preserved for their intended purpose.
+Time-Locked Smart Contracts: Users can lock WBTC in a smart contract until a customizable maturity date. Withdrawals or sales are prohibited before maturity, ensuring the funds are preserved for their intended purpose. 
 
-## Contract Functions
+## Usage Flow
 
-- makeDeposit: This function takes a balance and maturity from the user for their tokens to create and store a holding 
-- withDraw: If the holding is past maturity, the user is allowed to withdraw from their holding
-- _getUSDAmount(): Internal function accessing the WBTC/USDT pool to check the USD value of the pool, ensuring it works.
-- _blockTimeStamp(): Returns a formatted timestamp 
-- _getDecimals(): Returns the decimals for a contract
+1. User deposits WBTC tokens to the contract, specifying a maturity date
+2. The contract places the tokens into an AAVE Pool, accruing interest
+3. Once the specified maturity date has been reached, the user may withdraw tokens 
+
+## Installation steps 
+
+1. Run 'make all' to install foundry 
+2. Add a .env file for your API keys for Base, Optimism, or the Ethereum Main-net 
+3. Run the specified command for fork testing on whichever chain you desire
