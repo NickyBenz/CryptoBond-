@@ -16,5 +16,11 @@ Time-Locked Smart Contracts: Users can lock WBTC in a smart contract until a cus
 ## Installation steps 
 
 1. Run 'make all' to install foundry 
-2. Add a .env file for your API keys for Base, Optimism, or the Ethereum Main-net 
+2. Add a .env file for your endpoints 
 3. Run the specified command for fork testing on whichever chain you desire
+
+## Supported Chains
+
+- Ethereum L1 
+- Optimism L2 
+- Base L2
