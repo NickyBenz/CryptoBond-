@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 
-event HoldingCreated(address holder, uint256 depositAmount, uint256 maturity); //Event to emit whenever a new user creates a bond holding
+event HoldingCreated(address holder, uint256 depositAmount, uint256 maturity, uint256 tokenID); //Event to emit whenever a new user creates a bond holding
 event SavingsWithdrawed(address holder, uint256 withdrawalAmount); //Event to emit whenever a user successfully withdraws from their hoding
 
 
@@ -11,6 +11,7 @@ event SavingsWithdrawed(address holder, uint256 withdrawalAmount); //Event to em
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {BondNFT} from "./BondNFT.sol";
 import "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {AggregatorV3Interface} from "../lib/chainlink-local/src/data-feeds/interfaces/AggregatorV3Interface.sol";
 import {IPool} from "../lib/aave/contracts/interfaces/IPool.sol";
@@ -34,6 +35,7 @@ contract DeBond {
     struct Holding{
         uint256 balance;
         uint256 maturity;
+        uint256 tokenID;
     }
 
     //Maps each user address to their holdings struct
@@ -42,16 +44,20 @@ contract DeBond {
     //Mapping to check if the user has an active holding
     mapping(address => bool) s_isActive;
 
+  
+
     //Stores the total value of deposits 
     uint256 s_totalDeposits; 
     
+    BondNFT immutable i_bond_nft; //NFT attached to the bond 
     address immutable i_WBTC; //Wrapped BTC address
     address immutable i_price_feed; // BTC/USD price feed
     address immutable i_aave_pool; // AAVE pool address
     address immutable i_aWBTC; // AAVE Wrapped BTC address
-
+    
 
     constructor(address wbtc, address price_feed, address aave_pool, address aWBTC){
+        i_bond_nft = new BondNFT(address(this));
         i_WBTC = wbtc;
         i_price_feed = price_feed;
         i_aave_pool = aave_pool;
@@ -66,7 +72,7 @@ contract DeBond {
     /// @param maturity_date Timestamp at which the savings bond should allow the user to withdraw 
     /// Deposits cannot be made below $100 and above $1000.
     
-    function depositSavings(uint256 depositAmount, uint256 maturity_date ) external {
+    function depositSavings(uint256 depositAmount, uint256 maturity_date, string memory recipientName,string memory customMessage ) external {
             (uint256 usdDepositValue) = _getUSDAmount(depositAmount);
 
             if(s_isActive[msg.sender]){
@@ -84,15 +90,16 @@ contract DeBond {
                 revert InvalidMaturity();
             }
             else{
-                Holding memory userHolding = _createUserHolding(depositAmount, maturity_date);
+                Holding memory userHolding = _createUserHolding(depositAmount, maturity_date,0);
                 s_holdings[msg.sender] = userHolding;
                 s_isActive[msg.sender] = true;
                 s_totalDeposits += depositAmount;
                 IERC20(i_WBTC).approve(i_aave_pool, depositAmount);
                 IERC20(i_WBTC).transferFrom(msg.sender, address(this), depositAmount);
                 IPool(i_aave_pool).supply(i_WBTC, depositAmount, address(this),0);
-                
-                emit HoldingCreated(msg.sender, depositAmount, maturity_date);
+                uint256 _tokenID = i_bond_nft.mintNFT(msg.sender, recipientName, depositAmount, "WBTC", maturity_date, customMessage);
+                s_holdings[msg.sender].tokenID = _tokenID;
+                emit HoldingCreated(msg.sender, depositAmount, maturity_date, _tokenID);
             }
 
     }
@@ -131,6 +138,15 @@ contract DeBond {
         usdAmt = Math.mulDiv(scaled_btc_amount, (10**usdDecimals), uint256(price) * 10**(usdDecimals + btcDecimals));
         
  
+    }
+
+    function getTokenURI() public view  returns(string memory){
+        if(!s_isActive[msg.sender]){
+            revert NoDepositFound();
+        }else{
+            uint256 _tokenID = s_holdings[msg.sender].tokenID;
+            return i_bond_nft.tokenURI(_tokenID);
+        }
     }
 
     /// @notice Allows user to check deposit amount based on how much interest it has accrued from AAVE
@@ -173,8 +189,8 @@ contract DeBond {
     /// @notice Creates a new struct to represent a user's holdings
     /// @param depositAmount The amount the user has deposited
     /// @param maturityDate The maturity date chosen by the user
-    function _createUserHolding(uint256 depositAmount, uint256 maturityDate) internal pure returns(Holding memory){
-        Holding memory newHolding = Holding(depositAmount, maturityDate);
+    function _createUserHolding(uint256 depositAmount, uint256 maturityDate, uint256 tokenID) internal pure returns(Holding memory){
+        Holding memory newHolding = Holding(depositAmount, maturityDate, tokenID);
         return newHolding;
     }
 
