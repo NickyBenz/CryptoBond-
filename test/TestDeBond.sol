@@ -28,18 +28,24 @@ contract TestDeBond is Test {
     }
     ////////////////////////////////External Function Test/////////////////////////////////////////
 
+   
+
+
     function testDeposit() public {
         vm.startPrank(whale);
-        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
+        uint256 current_timestamp = block.timestamp;
+        uint256 maturity_timestamp = current_timestamp + ScriptConstants.MATURITY;
+        deBond.depositSavings(wbtc_deposit, maturity_timestamp, whale, "Nikhil", "Hi");
 
         vm.stopPrank();
     }
 
     function testCheckUpdateAmount() public {
         vm.startPrank(whale);
-        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
-        uint256 current_timestamp = block.timestamp;
-        vm.warp(current_timestamp + ScriptConstants.ONEMONTHEPOCHTIME);
+        uint256 deposit_timestamp = block.timestamp;
+        uint256 maturity_timestamp = deposit_timestamp + ScriptConstants.MATURITY;
+        deBond.depositSavings(wbtc_deposit, maturity_timestamp, whale, "Nikhil", "Hi");
+        vm.warp(deposit_timestamp + ScriptConstants.ONEMONTHEPOCHTIME);
         uint256 aave_deposit = deBond.checkDepositAmount();
         vm.stopPrank();
         console.log(aave_deposit);
@@ -50,7 +56,9 @@ contract TestDeBond is Test {
         vm.assume((usd_deposit > 1e9 && usd_deposit < 2e9) || usd_deposit < 1e2);
         vm.startPrank(whale);
         vm.expectRevert(DeBond.DepositOutOfRange.selector);
-        deBond.depositSavings(usd_deposit,ScriptConstants.MATURITY);
+        uint256 current_timestamp = block.timestamp;
+        uint256 maturity_timestamp = current_timestamp + ScriptConstants.MATURITY;
+        deBond.depositSavings(usd_deposit, maturity_timestamp,whale,"Nikhil", "Hi");
         vm.stopPrank();
     }
 
@@ -61,7 +69,9 @@ contract TestDeBond is Test {
         address user = vm.addr(privKey); //User with no tokens
         vm.startPrank(user);    
         vm.expectRevert(DeBond.DepositExceedsAccountBalance.selector);
-        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
+        uint256 current_timestamp = block.timestamp;
+        uint256 maturity_timestamp = current_timestamp + ScriptConstants.MATURITY;
+        deBond.depositSavings(wbtc_deposit,maturity_timestamp,whale, "Nikhil", "Hi");
         vm.stopPrank();
     }
 
@@ -69,25 +79,36 @@ contract TestDeBond is Test {
 
     function testWithdrawal() public {
         vm.startPrank(whale);
-        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
-        uint256 curr_timestamp = block.timestamp;
-        vm.warp(curr_timestamp + ScriptConstants.MATURITY);
+        uint256 initial_user_balance = IERC20(wbtc).balanceOf(whale); 
+        uint256 current_timestamp = block.timestamp;
+        uint256 maturity_timestamp = current_timestamp + ScriptConstants.MATURITY;
+        deBond.depositSavings(wbtc_deposit,  maturity_timestamp,whale, "Nikhil", "Hi");
+        vm.warp(maturity_timestamp);
         deBond.withDrawSavings(wbtc_deposit);
+        uint256 final_user_balance = IERC20(wbtc).balanceOf(whale);
         vm.stopPrank();
+        assert(initial_user_balance<=final_user_balance);
+
     }
 
     function testWithdrawalFailsIfWithdrawedBeforeMaturity() public {
         vm.startPrank(whale);
-        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
+        uint256 current_timestamp = block.timestamp;
+        uint256 maturity_timestamp = current_timestamp + ScriptConstants.MATURITY;
+        deBond.depositSavings(wbtc_deposit,maturity_timestamp,whale, "Nikhil", "Hi");
+        bytes memory expectedRevertData = abi.encodeWithSelector(DeBond.CannotWithdrawBeforeMaturity.selector, maturity_timestamp);
+        vm.expectRevert(expectedRevertData );
         deBond.withDrawSavings(wbtc_deposit);
         vm.stopPrank();
+       
     }
 
     function testWithdrawalFailIfAmountExceedsDepositBalance() public {
         vm.startPrank(whale);
-        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
-        uint256 curr_timestamp = block.timestamp;
-        vm.warp(curr_timestamp + ScriptConstants.MATURITY);
+        uint256 current_timestamp = block.timestamp;
+        uint256 maturity_timestamp = current_timestamp + ScriptConstants.MATURITY;
+        deBond.depositSavings(wbtc_deposit,maturity_timestamp,whale, "Nikhil", "Hi");
+        vm.warp(maturity_timestamp);
         vm.expectRevert(DeBond.WithdrawalExceedsDepositBalance.selector);
         uint256 withdrawal_amount = wbtc_deposit +1; 
         deBond.withDrawSavings(withdrawal_amount);
@@ -96,7 +117,9 @@ contract TestDeBond is Test {
 
     function testUserCanCheckDepositValue() public{
         vm.startPrank(whale);
-        deBond.depositSavings(wbtc_deposit,ScriptConstants.MATURITY);
+        uint256 current_timestamp = block.timestamp;
+        uint256 maturity_timestamp = current_timestamp + ScriptConstants.MATURITY;
+        deBond.depositSavings(wbtc_deposit,maturity_timestamp,whale, "Nikhil", "Hi");
         uint256 actual_deposit_value = deBond.checkDepositAmount();
         vm.stopPrank();
         assertEq(actual_deposit_value, wbtc_deposit);

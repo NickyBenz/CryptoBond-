@@ -1,42 +1,106 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* Dashboard container styles */
+.dashboard-container {
+    background-color: #2a2a2a; /* Slightly lighter dark background for the container */
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    max-width: 500px;
+    width: 100%;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* HomePage container styles */
+.home-page {
+    background-color: #2a2a2a; /* Matches dashboard container background */
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    max-width: 500px;
+    width: 100%;
+    text-align: center; /* Center-align content for HomePage */
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Headings for both Dashboard and HomePage */
+h1 {
+    font-size: 24px;
+    color: #ffffff;
+    text-align: center;
+    margin-bottom: 20px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+h2 {
+    font-size: 20px;
+    color: #ffffff;
+    text-align: center;
+    margin-bottom: 15px;
 }
 
-.card {
-  padding: 2em;
+h3 {
+    font-size: 18px;
+    color: #ffffff;
+    margin: 15px 0;
+    text-align: center;
 }
 
-.read-the-docs {
-  color: #888;
+/* Buttons for both Dashboard and HomePage */
+button {
+    background-color: #4a4a4a; /* Medium grey for buttons */
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    margin: 10px 0;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #5a5a5a; /* Lighter grey on hover */
+}
+
+/* Specific button styles for HomePage */
+.connect-button,
+.disconnect-button {
+    background-color: #4a4a4a; /* Matches dashboard button */
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    margin: 10px;
+}
+
+.connect-button:hover,
+.disconnect-button:hover {
+    background-color: #5a5a5a; /* Matches dashboard button hover */
+}
+
+/* Inputs for Dashboard */
+input {
+    background-color: #3a3a3a; /* Darker input background */
+    color: #d3d3d3;
+    border: 1px solid #4a4a4a;
+    padding: 8px;
+    border-radius: 5px;
+    width: 100%;
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+input:focus {
+    border-color: #6a6a6a; /* Lighter border on focus */
+}
+
+/* Paragraphs for both Dashboard and HomePage */
+p {
+    color: #d3d3d3;
+    font-size: 16px;
+    margin: 10px 0;
+    text-align: center;
+}
+
+/* Wallet info container for HomePage */
+.wallet-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
 }

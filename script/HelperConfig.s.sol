@@ -4,7 +4,7 @@ import {Script} from "lib/forge-std/src/Script.sol";
 
 
 library CHAIN_DATA{
-    ///BASE
+    ///BASE-MAIN-NET
     uint256 constant BASE_CHAIN_ID = 8453;
     address constant BASE_USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC address for base 
     address constant BASE_cbBTC = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; //Coinbase Wrapped BTC (cbBTC) address for base
@@ -12,6 +12,9 @@ library CHAIN_DATA{
     address constant BASE_PRICEFEED = 0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F;
     address constant BASE_AAVE_POOL = 0xA238Dd80C259a72e81d7e4664a9801593F98d1c5;
     address constant BASE_aCBBTC = 0xBdb9300b7CDE636d9cD4AFF00f6F009fFBBc8EE6;
+
+    //BASE_SEPOLIA_MAIN_NET
+    
 
     ///MAIN-NET
     uint256 constant MAIN_NET_CHAINID = 1;

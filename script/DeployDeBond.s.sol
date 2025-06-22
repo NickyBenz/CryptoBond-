@@ -8,6 +8,7 @@ import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol"
 import {AggregatorV3Interface} from "../lib/chainlink-local/src/data-feeds/interfaces/AggregatorV3Interface.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
+import {BondNFT} from "../src/BondNFT.sol";
 
 library ScriptConstants {
    
@@ -39,7 +40,6 @@ contract DeployDeBond is Script{
 
 
         DeBond deBond = new DeBond(wbtc, price_feed, aave_pool, awbtc); //Deploys the contract to the chain
-
 
         vm.stopBroadcast();        
         // vm.startPrank(ScriptConstants.cBBTCWHALE); //Start a prank as a WBTC whale 

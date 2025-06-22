@@ -72,7 +72,7 @@ contract DeBond {
     /// @param maturity_date Timestamp at which the savings bond should allow the user to withdraw 
     /// Deposits cannot be made below $100 and above $1000.
     
-    function depositSavings(uint256 depositAmount, uint256 maturity_date, string memory recipientName,string memory customMessage ) external {
+    function depositSavings(uint256 depositAmount, uint256 maturity_date, address recipient, string memory recipientName,string memory customMessage ) external {
             (uint256 usdDepositValue) = _getUSDAmount(depositAmount);
 
             if(s_isActive[msg.sender]){
@@ -86,20 +86,20 @@ contract DeBond {
             )
             {
                  revert DepositExceedsAccountBalance();
-            }else if( maturity_date > block.timestamp){
+            }else if( maturity_date < _blockTimeStamp()){
                 revert InvalidMaturity();
             }
             else{
                 Holding memory userHolding = _createUserHolding(depositAmount, maturity_date,0);
-                s_holdings[msg.sender] = userHolding;
-                s_isActive[msg.sender] = true;
+                s_holdings[recipient] = userHolding;
+                s_isActive[recipient] = true;
                 s_totalDeposits += depositAmount;
                 IERC20(i_WBTC).approve(i_aave_pool, depositAmount);
                 IERC20(i_WBTC).transferFrom(msg.sender, address(this), depositAmount);
                 IPool(i_aave_pool).supply(i_WBTC, depositAmount, address(this),0);
-                uint256 _tokenID = i_bond_nft.mintNFT(msg.sender, recipientName, depositAmount, "WBTC", maturity_date, customMessage);
-                s_holdings[msg.sender].tokenID = _tokenID;
-                emit HoldingCreated(msg.sender, depositAmount, maturity_date, _tokenID);
+                uint256 _tokenID = i_bond_nft.mintNFT(recipient, recipientName, depositAmount,  maturity_date,"WBTC", customMessage);
+                s_holdings[recipient].tokenID = _tokenID;
+                emit HoldingCreated(recipient, depositAmount, maturity_date, _tokenID);
             }
 
     }
@@ -198,8 +198,19 @@ contract DeBond {
         return uint256(block.timestamp);
     }
 
+  
 
 /////////////////////////////////////   Getters     ///////////////////////////////////////////
+      function getMaturity(address recipient) external view returns(uint256 maturity){
+        if (!s_isActive[recipient]){
+            revert NoDepositFound();
+        }else{
+            return s_holdings[recipient].maturity;
+        }
+    }
+
+
+
     function _getIWBTC() external view returns(address){
         return i_WBTC;
     }
@@ -219,4 +230,10 @@ contract DeBond {
     function getAWBTC() external view returns (address){
         return i_aWBTC;
     }
+
+    function isActive(address wallet) external view returns (bool){
+        return s_isActive[wallet];
+    }
+
+ 
 }

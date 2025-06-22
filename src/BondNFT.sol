@@ -5,8 +5,10 @@ import {ERC721URIStorage} from "lib/openzeppelin-contracts/contracts/token/ERC72
 import {ERC721} from "lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {Base64} from "lib/openzeppelin-contracts/contracts/utils/Base64.sol";
+import {Strings} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 
 contract BondNFT is ERC721URIStorage, Ownable{
+         
         uint256 tokenIDs;
         constructor(address initialOwner) ERC721("MyNFT", "NFT") Ownable(initialOwner) {
                 tokenIDs = 0;
@@ -16,8 +18,8 @@ contract BondNFT is ERC721URIStorage, Ownable{
         address recipient,
         string memory recipientName,
         uint256 bondValue,
-        string memory cryptocurrency,
         uint256 maturityDate,
+        string memory cryptocurrency,
         string memory customMessage
         ) public onlyOwner returns(uint256 tokenID){
            tokenIDs++;
@@ -26,8 +28,8 @@ contract BondNFT is ERC721URIStorage, Ownable{
           string memory svg = generateBondSVG(
               recipientName,
               bondValue,
-              cryptocurrency,
               maturityDate,
+              cryptocurrency, 
               customMessage
           );
         
@@ -43,30 +45,37 @@ contract BondNFT is ERC721URIStorage, Ownable{
   function generateBondSVG(
         string memory recipientName,
         uint256 bondValue,
-        string memory cryptocurrency,
         uint256 maturityDate,
+        string memory cryptocurrency,
         string memory customMessage
     ) internal pure returns (string memory) {
         // Convert maturity date from timestamp to readable format
-        string memory maturityDateStr = formatDate(maturityDate);
+        string memory bondValueStr  = Strings.toString(bondValue);
+         string memory maturityDateStr = Strings.toString(maturityDate);
+           return string(abi.encodePacked(
+        '<svg width="400" height="600" xmlns="http://www.w3.org/2000/svg">',
+        '<rect width="100%" height="100%" fill="#1A1A2E"/>',
+        '<rect x="20" y="20" width="360" height="560" rx="10" fill="#0F0F1C" stroke="#BA55D3" stroke-width="4"/>',
         
-        return string(abi.encodePacked(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500">',
-            '<rect width="400" height="500" fill="#f5f5f5"/>',
-            '<text x="200" y="50" font-family="Arial" font-size="24" text-anchor="middle" fill="#333">CRYPTO LEGACY BOND</text>',
-            '<text x="30" y="100" font-family="Arial" font-size="14" fill="#333">RECIPIENT:</text>',
-            '<text x="30" y="120" font-family="Arial" font-size="16" font-weight="bold" fill="#333">', recipientName, '</text>',
-            '<text x="30" y="160" font-family="Arial" font-size="14" fill="#333">BOND VALUE:</text>',
-            '<text x="30" y="180" font-family="Arial" font-size="16" font-weight="bold" fill="#333">', toString(bondValue), ' ', cryptocurrency, '</text>',
-            '<text x="30" y="220" font-family="Arial" font-size="14" fill="#333">MATURITY DATE:</text>',
-            '<text x="30" y="240" font-family="Arial" font-size="16" font-weight="bold" fill="#333">', maturityDateStr, '</text>',
-            '<text x="30" y="280" font-family="Arial" font-size="14" fill="#333">CRYPTOCURRENCY:</text>',
-            '<text x="30" y="300" font-family="Arial" font-size="16" font-weight="bold" fill="#333">', cryptocurrency, '</text>',
-            '<text x="30" y="340" font-family="Arial" font-size="14" fill="#333">MESSAGE:</text>',
-            '<text x="30" y="360" font-family="Arial" font-size="16" font-weight="bold" fill="#333">', customMessage, '</text>',
-            '<text x="200" y="480" font-family="Arial" font-size="12" text-anchor="middle" fill="#333">CryptoLegacyBond.com</text>',
-            '</svg>'
-        ));
+        '<text x="200" y="60" font-family="Arial" font-size="30" text-anchor="middle" fill="#BA55D3" font-weight="bold">CRYPTO LEGACY BOND</text>',
+        '<line x1="50" y1="100" x2="350" y2="100" stroke="#BA55D3" stroke-dasharray="5"/>',
+        
+        '<text x="50" y="150" font-family="Arial" font-size="18" fill="#BA55D3">RECIPIENT:</text>',
+        '<text x="50" y="180" font-family="Arial" font-size="16" fill="#FFFFFF">', recipientName, '</text>',
+        
+        '<text x="50" y="220" font-family="Arial" font-size="18" fill="#BA55D3">BOND VALUE:</text>',
+        '<text x="50" y="250" font-family="Arial" font-size="16" fill="#FFFFFF">', bondValueStr, ' ', cryptocurrency, '</text>',
+        
+        '<text x="50" y="290" font-family="Arial" font-size="18" fill="#BA55D3">MATURITY TIMESTAMP:</text>',
+        '<text x="50" y="320" font-family="Arial" font-size="16" fill="#FFFFFF">', maturityDateStr, '</text>',
+        
+        '<text x="50" y="360" font-family="Arial" font-size="18" fill="#BA55D3">MESSAGE:</text>',
+        '<text x="50" y="390" font-family="Arial" font-size="16" fill="#FFFFFF">', customMessage, '</text>',
+        
+        '<line x1="50" y1="460" y2="460" stroke="#BA55D3" stroke-dasharray="5"/>',
+        '<text x="200" y="490" font-family="Arial" font-size="12" text-anchor="middle" fill="#BA55D3">CryptoLegacyBond.com</text>',
+        '</svg>'
+    ));
     }
 
 
@@ -80,38 +89,9 @@ contract BondNFT is ERC721URIStorage, Ownable{
         return string(abi.encodePacked(baseURL, Base64.encode(bytes(json))));
     }
 
-        function toString(uint256 value) internal pure returns (string memory) {
-        if (value == 0) {
-            return "0";
-        }
-        uint256 temp = value;
-        uint256 digits;
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
-        }
-        bytes memory buffer = new bytes(digits);
-        while (value != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-        return string(buffer);
-
-
-
-
-    }
+  
         
-    function formatDate(uint256 timestamp) internal pure returns (string memory) {
-        // This is a simplified version - consider using a library for proper date formatting
-        return string(abi.encodePacked(
-            toString((timestamp / 86400 + 4) % 7), "/",  // Day
-            toString((timestamp / 2629743) % 12 + 1), "/",  // Month
-            toString(timestamp / 31556926 + 1970)  // Year
-        ));
-    }
-
+   
 
         
 
