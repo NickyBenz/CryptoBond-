@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers';
 
 export default function HomePage(){
@@ -11,7 +11,6 @@ export default function HomePage(){
   const isMetaMaskInstalled = () => {
     return typeof window.ethereum !== 'undefined'; //Checks if metamask is installed or not
   };
-
   const connectToMetaMask = async () => {
     if (!isMetaMaskInstalled()) {
       alert('Please install MetaMask first!'); //Tells user to connect metamask 
@@ -23,7 +22,7 @@ export default function HomePage(){
         method: 'eth_requestAccounts' //Requests the metamask 
       });
       
-      const provider = new ethers.getDefaultProvider("https://eth-mainnet.g.alchemy.com/v2/l9uW6evddktHwzEm4qTmS"); //Gets a HTTP provider from the brower  
+      const provider = new ethers.providers.Web3Provider(window.ethereum); 
       const network = await provider.getNetwork(); //Gets the current chain 
       
       setAccount(accounts[0]); //Gets the first account 
@@ -67,7 +66,6 @@ export default function HomePage(){
     }
   };
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (window.ethereum) {

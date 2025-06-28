@@ -39,7 +39,7 @@ contract DeBond {
     }
 
     //Maps each user address to their holdings struct
-    mapping(address => Holding) s_holdings;
+    mapping(address => Holding) public s_holdings;
 
     //Mapping to check if the user has an active holding
     mapping(address => bool) s_isActive;
@@ -151,7 +151,7 @@ contract DeBond {
 
     /// @notice Allows user to check deposit amount based on how much interest it has accrued from AAVE
     /// @return deposit_balance The value of the user's deposit
-    function checkDepositAmount() external  returns(uint256 deposit_balance){
+    function checkCurrentBalance() external  returns(uint256 deposit_balance){
         if(!s_isActive[msg.sender]){
             revert NoDepositFound();
         }else{
@@ -235,5 +235,12 @@ contract DeBond {
         return s_isActive[wallet];
     }
 
+    function getDeposit(address wallet) external  view returns(uint256 deposit_balance){
+        if(!s_isActive[wallet]){
+            revert NoDepositFound(); 
+        }else{
+            return s_holdings[wallet].balance;
+        }
+    }
  
 }

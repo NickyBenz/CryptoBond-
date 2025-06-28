@@ -46,7 +46,7 @@ contract TestDeBond is Test {
         uint256 maturity_timestamp = deposit_timestamp + ScriptConstants.MATURITY;
         deBond.depositSavings(wbtc_deposit, maturity_timestamp, whale, "Nikhil", "Hi");
         vm.warp(deposit_timestamp + ScriptConstants.ONEMONTHEPOCHTIME);
-        uint256 aave_deposit = deBond.checkDepositAmount();
+        uint256 aave_deposit = deBond.checkCurrentBalance();
         vm.stopPrank();
         console.log(aave_deposit);
      

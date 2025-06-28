@@ -53,7 +53,7 @@ contract BondNFT is ERC721URIStorage, Ownable{
         string memory bondValueStr  = Strings.toString(bondValue);
          string memory maturityDateStr = Strings.toString(maturityDate);
            return string(abi.encodePacked(
-        '<svg width="400" height="600" xmlns="http://www.w3.org/2000/svg">',
+       '<svg width="400" height="600" xmlns="http://www.w3.org/2000/svg">',
         '<rect width="100%" height="100%" fill="#1A1A2E"/>',
         '<rect x="20" y="20" width="360" height="560" rx="10" fill="#0F0F1C" stroke="#BA55D3" stroke-width="4"/>',
         
