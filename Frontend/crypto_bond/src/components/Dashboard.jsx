@@ -12,7 +12,7 @@ export default function Dashboard() {
   const [bondContract, setBondContract] = useState(null);
   const [tokenContract, setTokenContract] = useState(null);
   const [hasDeposit, setDeposited] = useState(false);
-  const bondContractAddress = ''; 
+  const bondContractAddress = '0xe298c4538F60910486aA3851e9098b5B7A4CD017'; 
   const tokenAddress = '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf'; 
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawalAmount, setWithdrawal] = useState('');
