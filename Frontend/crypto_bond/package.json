@@ -12,7 +12,7 @@
   "dependencies": {
     "bignumber": "^1.1.0",
     "date-fns": "^2.30.0",
-    "ethers": "5.7",
+    "ethers": "^5.8.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0"
@@ -26,6 +26,6 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
-    "vite": "^5.0.0"
+    "vite": "^5.0.7"
   }
 }
